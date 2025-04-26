@@ -58,8 +58,8 @@ function update(delta) {
   player.moving = dx || dy;
 
   // facing
-  if (dx > 0) player.dir = "Left";   // D moves right, show left sprite
-  else if (dx < 0) player.dir = "Right";
+  if (dx > 0) player.dir = "Right";   // fixed: D moves right, show right sprite
+  else if (dx < 0) player.dir = "Left";
   else if (dy > 0) player.dir = "Front";
   else if (dy < 0) player.dir = "Back";
 
