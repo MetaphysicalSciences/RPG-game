@@ -1,118 +1,193 @@
-// === script.js ===
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+canvas.width = 800;
+canvas.height = 600;
 
-// Fullscreen canvas
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+const keys = {
+  w: false,
+  a: false,
+  s: false,
+  d: false,
+  space: false
+};
 
-// Player
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'w') keys.w = true;
+  if (e.key === 'a') keys.a = true;
+  if (e.key === 's') keys.s = true;
+  if (e.key === 'd') keys.d = true;
+  if (e.code === 'Space') keys.space = true;
+});
+
+document.addEventListener('keyup', (e) => {
+  if (e.key === 'w') keys.w = false;
+  if (e.key === 'a') keys.a = false;
+  if (e.key === 's') keys.s = false;
+  if (e.key === 'd') keys.d = false;
+  if (e.code === 'Space') keys.space = false;
+});
+
 const player = {
   x: canvas.width / 2,
   y: canvas.height / 2,
-  dir: "Front", // "Front","Back","Left","Right"
-  frame: 0,
-  frameTimer: 0,
+  width: 48,
+  height: 64,
+  speed: 2.5,
+  frameX: 0,
+  frameY: 0,
   moving: false,
+  facing: "right",
+  mana: 100,
+  manaRegenRate: 0.02
 };
 
-const SPEED_WALK = 2;
-const FRAME_DELAY = 100;
-const WALK_FRAMES = 10;
+// player sprite sheet
+const playerImg = new Image();
+playerImg.src = 'IdleRight.png'; // Start with facing right
 
-const keys = { w:0, a:0, s:0, d:0, f:0 };
+function loadPlayerImages(callback) {
+  playerImg.onload = callback;
+}
 
-// Load player images
-const imgs = {
-  IdleFront: new Image(), IdleBack: new Image(),
-  IdleLeft: new Image(),  IdleRight: new Image(),
-  WalkFront: [], WalkBack: [],
-  WalkLeft: [],  WalkRight: []
-};
+function drawPlayer() {
+  if (player.facing === "left") {
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(playerImg,
+      player.frameX * player.width, player.frameY * player.height,
+      player.width, player.height,
+      -player.x - player.width / 2, player.y - player.height / 2,
+      player.width, player.height
+    );
+    ctx.restore();
+  } else {
+    ctx.drawImage(playerImg,
+      player.frameX * player.width, player.frameY * player.height,
+      player.width, player.height,
+      player.x - player.width / 2, player.y - player.height / 2,
+      player.width, player.height
+    );
+  }
+}
 
-function loadPlayerImages(cb) {
-  let loaded = 0;
-  const total = 4 + 4 * WALK_FRAMES;
-  const done = () => { if (++loaded === total) cb(); };
+function movePlayer() {
+  let moved = false;
 
-  ["Front","Back","Left","Right"].forEach(dir => {
-    imgs["Idle"+dir].src = `Idle${dir}.png`;
-    imgs["Idle"+dir].onload = done;
-    for (let i = 1; i <= WALK_FRAMES; i++) {
-      const im = new Image();
-      im.src = `Walk${dir}${i}.png`;
-      im.onload = done;
-      imgs["Walk"+dir].push(im);
-    }
+  if (keys.a) {
+    tryMovePlayer(-player.speed, 0);
+    player.facing = "left";
+    moved = true;
+  }
+  if (keys.d) {
+    tryMovePlayer(player.speed, 0);
+    player.facing = "right";
+    moved = true;
+  }
+  if (keys.w) {
+    tryMovePlayer(0, -player.speed);
+    moved = true;
+  }
+  if (keys.s) {
+    tryMovePlayer(0, player.speed);
+    moved = true;
+  }
+
+  player.moving = moved;
+}
+
+// mana regeneration
+function updateMana(delta) {
+  player.mana += player.manaRegenRate * delta;
+  if (player.mana > 100) {
+    player.mana = 100;
+  }
+}
+
+// draw mana bar
+function drawManaBar() {
+  ctx.fillStyle = "black";
+  ctx.fillRect(10, 10, 200, 20);
+  ctx.fillStyle = "blue";
+  ctx.fillRect(10, 10, 200 * (player.mana / 100), 20);
+}
+
+// draw fireballs (magic.js function still used)
+function drawMagic() {
+  fireballs.forEach(fireball => {
+    ctx.drawImage(fireballImg, fireball.x - 8, fireball.y - 8, 16, 16);
   });
 }
 
-function update(delta) {
-  // movement
-  let dx = keys.d - keys.a;
-  let dy = keys.s - keys.w;
-  player.moving = dx || dy;
+// update fireballs
+function updateMagic(delta) {
+  fireballs.forEach((fireball, index) => {
+    fireball.x += fireball.vx * fireball.speed;
+    fireball.y += fireball.vy * fireball.speed;
 
-  // facing
-  if (dx > 0) player.dir = "Right";   // fixed: D moves right, show right sprite
-  else if (dx < 0) player.dir = "Left";
-  else if (dy > 0) player.dir = "Front";
-  else if (dy < 0) player.dir = "Back";
-
-  // move & animate
-  if (player.moving) {
-    const speed = SPEED_WALK;
-    player.x += dx * speed;
-    player.y += dy * speed;
-
-    player.frameTimer += delta;
-    const delay = FRAME_DELAY;
-    if (player.frameTimer >= delay) {
-      player.frame = (player.frame + 1) % WALK_FRAMES;
-      player.frameTimer = 0;
+    if (collidesWithWall(fireball.x, fireball.y, 8, 8)) {
+      fireballs.splice(index, 1);
     }
-  } else {
-    player.frame = 0;
+
+    slimes.forEach((slime, slimeIndex) => {
+      if (fireball.x > slime.x &&
+          fireball.x < slime.x + slime.width &&
+          fireball.y > slime.y &&
+          fireball.y < slime.y + slime.height) {
+        slime.hp--;
+        fireballs.splice(index, 1);
+        if (slime.hp <= 0) {
+          slimes.splice(slimeIndex, 1);
+        }
+      }
+    });
+  });
+}
+
+// shoot fireballs
+function shootFireball() {
+  if (player.mana >= 10) {
+    let dir = player.facing === "right" ? 1 : -1;
+    fireballs.push({
+      x: player.x,
+      y: player.y,
+      vx: dir,
+      vy: 0,
+      speed: 6
+    });
+    player.mana -= 10;
   }
 }
 
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const act = player.moving ? "Walk" : "Idle";
-  const sheet = imgs[act+player.dir];
-  if (player.moving) {
-    const img = sheet[player.frame];
-    ctx.drawImage(img, player.x - img.width/2, player.y - img.height/2);
-  } else {
-    ctx.drawImage(sheet, player.x - sheet.width/2, player.y - sheet.height/2);
+setInterval(() => {
+  if (keys.space) {
+    shootFireball();
   }
-}
+}, 300);
 
-// key handlers
-document.addEventListener("keydown", e => {
-  if (e.key in keys) keys[e.key] = 1;
-});
-document.addEventListener("keyup", e => {
-  if (e.key in keys) keys[e.key] = 0;
-});
-
-// start
+// now the full game loop
 loadPlayerImages(() => {
-  // spawn 5 slimes for testing
-  for (let i = 0; i < 5; i++) {
-    const x = 50 + Math.random()*(canvas.width-100);
-    const y = 50 + Math.random()*(canvas.height-100);
-    spawnEnemy(x,y);
+  generateDungeon();
+  placeSlimes();
+
+  let lastTime = 0;
+  function gameLoop(timeStamp) {
+    let deltaTime = timeStamp - lastTime;
+    lastTime = timeStamp;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    movePlayer();
+    updateMana(deltaTime);
+    updateMagic(deltaTime);
+
+    drawDungeon();
+    drawPlayer();
+    drawMagic();
+    drawSlimes();
+    drawManaBar();
+
+    requestAnimationFrame(gameLoop);
   }
 
-  let last = 0;
-  function loop(ts) {
-    const delta = ts - last; last = ts;
-    update(delta);
-    updateMagic(delta);
-    draw();
-    drawMagic();
-    requestAnimationFrame(loop);
-  }
-  requestAnimationFrame(loop);
+  requestAnimationFrame(gameLoop);
 });
