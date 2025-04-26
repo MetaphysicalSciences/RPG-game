@@ -1,36 +1,28 @@
 // === magic.js ===
 const manaMax = 100;
 let mana = manaMax;
-let manaRechargeSpeed = 10; // mana per second
-let manaCost = 20;
+const manaRechargeSpeed = 10;   // mana per second
+const manaCost = 20;
 
 const fireballs = [];
 const enemies = [];
+const slimeImg = new Image();
+slimeImg.src = "SlimeBlue.png";
 
 const fireballSpeed = 5;
-const fireballSize = 16;
+const fireballSize = 32;        // made bigger
 const fireballImg = new Image();
-fireballImg.src = "fireball.png"; // Replace with actual fireball image
+fireballImg.src = "fireball.png";
 
-// Enemy setup
-function spawnEnemy(x, y) {
-  enemies.push({
-    x: x,
-    y: y,
-    width: 32,
-    height: 32,
-    hp: 4,
-  });
-}
-
-// Shoot fireball
+// Shoot fireball on F
 document.addEventListener("keydown", (e) => {
   if (e.key === "f" && mana >= manaCost) {
-    let angle = 0;
-    if (player.dir === "Front") angle = Math.PI / 2;
-    if (player.dir === "Back") angle = -Math.PI / 2;
-    if (player.dir === "Left") angle = Math.PI;
+    let angle;
+    // fixed: Right → 0, Left → π, Front (down) → π/2, Back (up) → -π/2
     if (player.dir === "Right") angle = 0;
+    else if (player.dir === "Left") angle = Math.PI;
+    else if (player.dir === "Front") angle = Math.PI / 2;
+    else /* Back */                  angle = -Math.PI / 2;
 
     fireballs.push({
       x: player.x,
@@ -43,38 +35,38 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
+function spawnEnemy(x, y) {
+  enemies.push({ x, y, width: 32, height: 32, hp: 4 });
+}
+
 function updateMagic(delta) {
-  // Recharge mana only when not pressing F
+  // Recharge mana when not holding F
   if (!keys.f && mana < manaMax) {
     mana += manaRechargeSpeed * (delta / 1000);
     if (mana > manaMax) mana = manaMax;
   }
 
-  // Update fireballs
+  // Fireball movement & collision
   for (let i = fireballs.length - 1; i >= 0; i--) {
     const f = fireballs[i];
     f.x += f.dx;
     f.y += f.dy;
 
-    // Remove fireball if offscreen
-    if (f.x < 0 || f.x > canvas.width || f.y < 0 || f.y > canvas.height) {
+    // offscreen?
+    if (f.x < -fireballSize || f.x > canvas.width + fireballSize ||
+        f.y < -fireballSize || f.y > canvas.height + fireballSize) {
       fireballs.splice(i, 1);
       continue;
     }
 
-    // Check collisions with enemies
+    // hit enemies?
     for (let j = enemies.length - 1; j >= 0; j--) {
       const e = enemies[j];
-      if (
-        f.x > e.x && f.x < e.x + e.width &&
-        f.y > e.y && f.y < e.y + e.height
-      ) {
+      if (f.x > e.x && f.x < e.x + e.width &&
+          f.y > e.y && f.y < e.y + e.height) {
         e.hp--;
-        fireballs.splice(i, 1); // Destroy fireball on hit
-
-        if (e.hp <= 0) {
-          enemies.splice(j, 1); // Kill enemy
-        }
+        fireballs.splice(i, 1);
+        if (e.hp <= 0) enemies.splice(j, 1);
         break;
       }
     }
@@ -82,22 +74,26 @@ function updateMagic(delta) {
 }
 
 function drawMagic() {
-  // Draw mana bar
+  // Mana bar
   ctx.fillStyle = "black";
-  ctx.fillRect(20, 20, 104, 14);
+  ctx.fillRect(20, 20, manaMax + 4, 14);
   ctx.fillStyle = "blue";
   ctx.fillRect(22, 22, mana, 10);
 
-  // Draw fireballs
+  // Fireballs
   fireballs.forEach(f => {
-    ctx.drawImage(fireballImg, f.x - fireballSize/2, f.y - fireballSize/2, fireballSize, fireballSize);
+    ctx.drawImage(
+      fireballImg,
+      f.x - fireballSize/2,
+      f.y - fireballSize/2,
+      fireballSize,
+      fireballSize
+    );
   });
 
-  // Draw enemies
+  // Enemies (slimes)
   enemies.forEach(e => {
-    ctx.fillStyle = "red";
-    ctx.fillRect(e.x, e.y, e.width, e.height);
-
+    ctx.drawImage(slimeImg, e.x, e.y, e.width, e.height);
     // HP bar
     ctx.fillStyle = "black";
     ctx.fillRect(e.x, e.y - 10, e.width, 5);
