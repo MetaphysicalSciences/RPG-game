@@ -1,5 +1,5 @@
 // === magic.js ===
-const manaMax = 101;
+const manaMax = 100;
 let mana = manaMax;
 const manaRechargeSpeed = 10;   // mana per second
 const manaCost = 20;
@@ -10,7 +10,7 @@ const slimeImg = new Image();
 slimeImg.src = "SlimeBlue.png";
 
 const fireballSpeed = 5;
-const fireballSize = 32;        // made bigger
+const fireballSize = 64;        // Fireball size increased
 const fireballImg = new Image();
 fireballImg.src = "fireball.png";
 
