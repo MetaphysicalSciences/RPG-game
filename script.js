@@ -23,9 +23,10 @@ const FRAME_DELAY = 100;
 const RUN_DELAY   = 50;
 const WALK_FRAMES = 10;
 
+// Input state
 const keys = { w:0, a:0, s:0, d:0, Shift:0, f:0 };
 
-// Load player images
+// Image storage
 const imgs = {
   IdleFront: new Image(), IdleBack: new Image(),
   IdleLeft: new Image(),  IdleRight: new Image(),
@@ -33,10 +34,11 @@ const imgs = {
   WalkLeft: [],  WalkRight: []
 };
 
+// Load all player images
 function loadPlayerImages(cb) {
   let loaded = 0;
   const total = 4 + 4 * WALK_FRAMES;
-  const done = () => { if (++loaded === total) cb(); };
+  function done() { if (++loaded === total) cb(); }
 
   ["Front","Back","Left","Right"].forEach(dir => {
     imgs["Idle"+dir].src = `Idle${dir}.png`;
@@ -50,20 +52,21 @@ function loadPlayerImages(cb) {
   });
 }
 
+// Update player position, direction, and animation
 function update(delta) {
-  // movement
+  // Compute movement vector
   let dx = keys.d - keys.a;
   let dy = keys.s - keys.w;
   player.running = keys.Shift;
-  player.moving = dx || dy;
+  player.moving = dx !== 0 || dy !== 0;
 
-  // facing
-  if (dx > 0) player.dir = "Right";   // fixed: D moves right, show right sprite
-  else if (dx < 0) player.dir = "Left";
-  else if (dy > 0) player.dir = "Front";
-  else if (dy < 0) player.dir = "Back";
+  // Swap mapping: D (dx>0) → Right, A (dx<0) → Left
+  if (dx > 0)           player.dir = "Right";  
+  else if (dx < 0)      player.dir = "Left";
+  else if (dy > 0)      player.dir = "Front";
+  else if (dy < 0)      player.dir = "Back";
 
-  // move & animate
+  // Movement and frame stepping
   if (player.moving) {
     const speed = player.running ? SPEED_RUN : SPEED_WALK;
     player.x += dx * speed;
@@ -80,10 +83,12 @@ function update(delta) {
   }
 }
 
+// Draw player sprite
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const act = player.moving ? "Walk" : "Idle";
-  const sheet = imgs[act+player.dir];
+  const action = player.moving ? "Walk" : "Idle";
+  const sheet = imgs[action + player.dir];
+
   if (player.moving) {
     const img = sheet[player.frame];
     ctx.drawImage(img, player.x - img.width/2, player.y - img.height/2);
@@ -92,7 +97,7 @@ function draw() {
   }
 }
 
-// key handlers
+// Key event listeners
 document.addEventListener("keydown", e => {
   if (e.key in keys) keys[e.key] = 1;
 });
@@ -100,13 +105,13 @@ document.addEventListener("keyup", e => {
   if (e.key in keys) keys[e.key] = 0;
 });
 
-// start
+// Start everything
 loadPlayerImages(() => {
-  // spawn 5 slimes for testing
+  // Spawn 5 slimes for testing
   for (let i = 0; i < 5; i++) {
     const x = 50 + Math.random()*(canvas.width-100);
     const y = 50 + Math.random()*(canvas.height-100);
-    spawnEnemy(x,y);
+    spawnEnemy(x, y);
   }
 
   let last = 0;
