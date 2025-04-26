@@ -1,8 +1,10 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-const SPEED = 2;
-const FRAME_DELAY = 100; // Time (ms) between frames
+const WALK_SPEED = 2;
+const RUN_SPEED = 4;
+const FRAME_DELAY = 100; // Normal speed
+const RUN_FRAME_DELAY = 50; // Faster speed while running
 const WALK_FRAME_COUNT = 10;
 
 const player = {
@@ -12,13 +14,15 @@ const player = {
   frame: 0,
   frameTimer: 0,
   moving: false,
+  running: false,
 };
 
 const keys = {
-  ArrowUp: false,
-  ArrowDown: false,
-  ArrowLeft: false,
-  ArrowRight: false,
+  w: false,
+  a: false,
+  s: false,
+  d: false,
+  Shift: false,
 };
 
 const images = {
@@ -62,23 +66,29 @@ function loadImages(callback) {
 function update(delta) {
   let dx = 0, dy = 0;
 
-  if (keys.ArrowUp) dy -= 1;
-  if (keys.ArrowDown) dy += 1;
-  if (keys.ArrowLeft) dx -= 1;
-  if (keys.ArrowRight) dx += 1;
+  player.running = keys.Shift;
+
+  if (keys.w) dy -= 1;
+  if (keys.s) dy += 1;
+  if (keys.a) dx -= 1;
+  if (keys.d) dx += 1;
 
   player.moving = dx !== 0 || dy !== 0;
 
-  if (dy < 0) player.dir = "Back";
-  else if (dy > 0) player.dir = "Front";
-  else if (dx < 0) player.dir = "Left";
-  else if (dx > 0) player.dir = "Right";
+  // Fix left-right swap
+  if (dx < 0) player.dir = "Right"; // A = go left, show facing right
+  else if (dx > 0) player.dir = "Left"; // D = go right, show facing left
+  else if (dy < 0) player.dir = "Back"; // W = go up
+  else if (dy > 0) player.dir = "Front"; // S = go down
 
   if (player.moving) {
-    player.x += dx * SPEED;
-    player.y += dy * SPEED;
+    const speed = player.running ? RUN_SPEED : WALK_SPEED;
+    player.x += dx * speed;
+    player.y += dy * speed;
+
+    const frameDelay = player.running ? RUN_FRAME_DELAY : FRAME_DELAY;
     player.frameTimer += delta;
-    if (player.frameTimer >= FRAME_DELAY) {
+    if (player.frameTimer >= frameDelay) {
       player.frame = (player.frame + 1) % WALK_FRAME_COUNT;
       player.frameTimer = 0;
     }
