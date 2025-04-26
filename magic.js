@@ -1,5 +1,5 @@
 // === magic.js ===
-const manaMax = 100;
+const manaMax = 101;
 let mana = manaMax;
 const manaRechargeSpeed = 10;   // mana per second
 const manaCost = 20;
