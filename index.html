@@ -2,13 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>RPG with Dungeon</title>
-  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RPG Demo with Magic</title>
+  <style>
+    /* ==================== style.css content ==================== */
+    body {
+      margin: 0;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #222;
+    }
+    #game {
+      border: 2px solid #555;
+      background: #333;
+      image-rendering: pixelated;
+    }
+    /* ========================================================== */
+  </style>
 </head>
 <body>
   <canvas id="game"></canvas>
 
+  <!-- Main movement + animation -->
   <script src="script.js"></script>
+  <!-- Magic, fireballs, enemies -->
   <script src="magic.js"></script>
 </body>
 </html>
