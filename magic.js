@@ -1,120 +1,83 @@
-// ==================== magic.js ====================
-// Mana settings
-const manaMax = 100;
-let mana = manaMax;
-const manaRechargeSpeed = 10; // per second
-const manaCost = 20;
+// magic.js
 
-// Fireballs & enemies
-const fireballs = [];
-const enemies = [];
+const magicImage = new Image();
+magicImage.src = 'SlimeFix.png'; // Updated to SlimeFix.png
 
-// Fireball sprite
-const fireballImg = new Image();
-fireballImg.src = "fireball.png";
-
-// Slime sprite
-const slimeImg = new Image();
-slimeImg.src = "SlimeBlue.png";
-
-// Fireball properties
-const fireballSpeed = 5;
-const fireballSize = 32;
-
-// Spawn an enemy at (x,y)
-function spawnEnemy(x, y) {
-  enemies.push({
-    x: x,
-    y: y,
-    width: 32,
-    height: 32,
-    hp: 4
-  });
-}
-
-// Shooting logic
-document.addEventListener("keydown", e => {
-  if (e.key === "f" && mana >= manaCost) {
-    // Determine angle by player.dir
-    let angle = 0;
-    if (player.dir === "Right") angle = 0;
-    else if (player.dir === "Left") angle = Math.PI;
-    else if (player.dir === "Front") angle = Math.PI/2;
-    else if (player.dir === "Back") angle = -Math.PI/2;
-
-    fireballs.push({
-      x: player.x,
-      y: player.y,
-      dx: Math.cos(angle)*fireballSpeed,
-      dy: Math.sin(angle)*fireballSpeed
-    });
-    mana -= manaCost;
-  }
-});
-
-// Update fireballs, mana recharge, collisions
-function updateMagic(delta) {
-  // Recharge when not holding F
-  if (!keys.f && mana < manaMax) {
-    mana += manaRechargeSpeed * (delta/1000);
-    if (mana > manaMax) mana = manaMax;
-  }
-
-  // Move & collide fireballs
-  for (let i = fireballs.length-1; i >= 0; i--) {
-    const f = fireballs[i];
-    f.x += f.dx;
-    f.y += f.dy;
-
-    // Remove offscreen
-    if (f.x < -fireballSize || f.x > canvas.width+fireballSize ||
-        f.y < -fireballSize || f.y > canvas.height+fireballSize) {
-      fireballs.splice(i,1);
-      continue;
+class Magic {
+    constructor(x, y, direction) {
+        this.x = x;
+        this.y = y;
+        this.speed = 5;
+        this.size = 20;
+        this.direction = direction; // 'left' or 'right'
+        this.particles = [];
     }
 
-    // Check collisions vs enemies
-    for (let j = enemies.length-1; j >= 0; j--) {
-      const e = enemies[j];
-      if (f.x > e.x && f.x < e.x+e.width &&
-          f.y > e.y && f.y < e.y+e.height) {
-        e.hp--;
-        fireballs.splice(i,1);
-        if (e.hp <= 0) enemies.splice(j,1);
-        break;
-      }
+    update() {
+        // Corrected movement: right is positive, left is negative
+        if (this.direction === 'right') {
+            this.x += this.speed;
+        } else if (this.direction === 'left') {
+            this.x -= this.speed;
+        }
+
+        // Update particle effects
+        this.particles.push({
+            x: this.x,
+            y: this.y,
+            size: Math.random() * 5 + 2,
+            alpha: 1
+        });
+
+        this.particles.forEach(p => {
+            p.alpha -= 0.02;
+            p.size *= 0.96;
+        });
+
+        this.particles = this.particles.filter(p => p.alpha > 0);
     }
-  }
+
+    draw(ctx) {
+        // Draw particles first (behind the magic)
+        this.particles.forEach(p => {
+            ctx.save();
+            ctx.globalAlpha = p.alpha;
+            ctx.fillStyle = 'cyan';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+
+        // Draw the main magic ball
+        ctx.drawImage(magicImage, this.x - this.size / 2, this.y - this.size / 2, this.size, this.size);
+    }
+
+    isOffScreen(canvasWidth) {
+        return this.x < 0 || this.x > canvasWidth;
+    }
 }
 
-// Draw mana bar, fireballs, enemies
-function drawMagic() {
-  // Mana bar background
-  ctx.fillStyle = "#000";
-  ctx.fillRect(20,20, manaMax+4, 14);
-  // Mana fill
-  ctx.fillStyle = "#00f";
-  ctx.fillRect(22,22, mana, 10);
+// List to store all active magic shots
+const magics = [];
 
-  // Fireballs
-  fireballs.forEach(f => {
-    ctx.drawImage(
-      fireballImg,
-      f.x - fireballSize/2,
-      f.y - fireballSize/2,
-      fireballSize,
-      fireballSize
-    );
-  });
-
-  // Enemies (slimes)
-  enemies.forEach(e => {
-    ctx.drawImage(slimeImg, e.x, e.y, e.width, e.height);
-    // HP bar background
-    ctx.fillStyle = "#000";
-    ctx.fillRect(e.x, e.y-10, e.width, 5);
-    // HP fill
-    ctx.fillStyle = "#0f0";
-    ctx.fillRect(e.x, e.y-10, e.width*(e.hp/4), 5);
-  });
+function shootMagic(playerX, playerY, facing) {
+    const direction = facing; // Now uses correct left/right
+    magics.push(new Magic(playerX, playerY, direction));
 }
+
+function updateMagics(canvasWidth) {
+    for (let i = magics.length - 1; i >= 0; i--) {
+        magics[i].update();
+        if (magics[i].isOffScreen(canvasWidth)) {
+            magics.splice(i, 1);
+        }
+    }
+}
+
+function drawMagics(ctx) {
+    magics.forEach(m => m.draw(ctx));
+}
+
+// Export if needed
+// export { shootMagic, updateMagics, drawMagics };
